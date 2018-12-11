@@ -74,10 +74,6 @@ def lambda_handler(event, context):
         # api-gateway-simple-proxy-for-lambda-output-format
         https: // docs.aws.amazon.com/apigateway/latest/developerguide/set-up-lambda-proxy-integrations.html
     """
-    
-    pipoResults = {}
-    regex = r"([^\s]*pipo[^\s]*)"
-    output = ""
 
     try:
         dynamodb = boto3.client('dynamodb',
@@ -86,74 +82,24 @@ def lambda_handler(event, context):
             aws_access_key_id="Al final ninguna de estas 2",
             aws_secret_access_key="era verdaderamente importante")
 
-        # # Insertar un item
-        # output = dynamodb.put_item(
-        #     TableName='Pipo',
-        #     Item={
-        #         'filename':{
-        #             'S': 'pipofile2.txt'
-        #         },
-        #         'pipo': {
-        #             'N': "12"
-        #         },
-        #         'pipopi': {
-        #             'N': "35"
-        #         }
-        #     }
-        # )
+        pipoRecord = dynamodb.scan(TableName='Pipo')['Items'][0] or { 'id': { 'S': 'pipoId' } } # Solo usamos un record
 
-        # # SELECT * FROM Pipo (Esto tiene que hacer la otra funcion)
-        # results = dynamodb.scan(TableName='Pipo')['Items']
-        # output = results
-     
-        # resultHash = {}
-        # for result in results:
-        #     for key in result.keys():
-        #         if 'N' in result[key].keys():
-        #             resultHash[key] = str(int(resultHash.get(key, '0')) + int(result[key]['N']))
-        # output = resultHash
-        
-        # table = dynamodb.get_table('Pipo')
-       
-        # table = dynamodb.delete_table(TableName='Pipo')
-       
-        # # Asi se creo la tabla
-        # table = dynamodb.create_table(
-        #     TableName='Pipo',
-        #     KeySchema=[
-        #         {
-        #             'AttributeName': "filename",
-        #             'KeyType': "HASH"
+        with open('files/pipo1.txt', 'r') as content_file:
+            regex = r"([^\s]*pipo[^\s]*)"
+            content = content_file.read()
+            matches = re.finditer(regex, content, re.IGNORECASE | re.MULTILINE)
 
-        #         }
-        #     ],
-        #     AttributeDefinitions=[
-        #         {
-        #             'AttributeName': "filename",
-        #             'AttributeType': "S"
-        #         }
-        #     ],
-        #     ProvisionedThroughput={
-        #         'ReadCapacityUnits': 10,
-        #         'WriteCapacityUnits': 10
-        #     }
-        # )
-        # output = table
+            for _, match in enumerate(matches):
+                matchName = match.group().lower()
+                pipoRecord.setdefault(matchName, {'N': '0'})
+                pipoCurrentValue = int(pipoRecord[matchName]['N'])
+                pipoRecord[matchName] = { 'N': str(pipoCurrentValue + 1) }
 
-        # # Esto es el parser, gracias regex101.com
-        # with open('files/pipo1.txt', 'r') as content_file:
-        #     content = content_file.read()
-        #     matches = re.finditer(regex, content, re.IGNORECASE | re.MULTILINE)
-        #     for matchNum, match in enumerate(matches):
-        #         matchNum = matchNum + 1
-                
-        #         print ("Match {matchNum} was found at {start}-{end}: {match}".format(matchNum = matchNum, start = match.start(), end = match.end(), match = match.group()))
-                
-        #         for groupNum in range(0, len(match.groups())):
-        #             groupNum = groupNum + 1
-                    
-        #             print ("Group {groupNum} found at {start}-{end}: {group}".format(groupNum = groupNum, start = match.start(groupNum), end = match.end(groupNum), group = match.group(groupNum)))
-         
+        output = dynamodb.put_item(
+            TableName='Pipo',
+            Item=pipoRecord
+        )
+
     except Exception as inst:
         output = "Unexpected error: {0}: {1}".format(type(inst), inst)
 
