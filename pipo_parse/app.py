@@ -1,4 +1,5 @@
 import json
+import os
 
 import requests
 
@@ -76,24 +77,36 @@ def lambda_handler(event, context):
     """
 
     try:
-        dynamodb = boto3.client('dynamodb',
-            endpoint_url="http://172.16.123.1:8000", # Para que esto ande hay que hacer esta magia: 'sudo ifconfig lo0 -alias 172.16.123.1'
-            region_name='us-west-2', 
-            aws_access_key_id="Al final ninguna de estas 2",
-            aws_secret_access_key="era verdaderamente importante")
+        s3 = boto3.client('s3')
+
+        bucketName = event['Records'][0]['s3']['bucket']['name']
+        fileKey = event['Records'][0]['s3']['object']['key']
+
+        print(bucketName)
+        print(fileKey)
+
+        if os.environ["TEST_LOCALLY"]:
+            dynamodb = boto3.client('dynamodb',
+                endpoint_url="http://172.16.123.1:8000", # Para que esto ande hay que hacer esta magia: 'sudo ifconfig lo0 -alias 172.16.123.1'
+                region_name='us-west-2', 
+                aws_access_key_id="Al final ninguna de estas 2",
+                aws_secret_access_key="era verdaderamente importante")
+            content_file = open('files/pipo1.txt')    
+        else:
+            dynamodb = boto3.client('dynamodb')
+            content_file = s3.get_object(Bucket=bucketName, Key=filekey)
 
         pipoRecord = dynamodb.scan(TableName='Pipo')['Items'][0] or { 'id': { 'S': 'pipoId' } } # Solo usamos un record
 
-        with open('files/pipo1.txt', 'r') as content_file:
-            regex = r"([^\s]*pipo[^\s]*)"
-            content = content_file.read()
-            matches = re.finditer(regex, content, re.IGNORECASE | re.MULTILINE)
+        regex = r"([^\s]*pipo[^\s]*)"
+        content = content_file.read()
+        matches = re.finditer(regex, content, re.IGNORECASE | re.MULTILINE)
 
-            for _, match in enumerate(matches):
-                matchName = match.group().lower()
-                pipoRecord.setdefault(matchName, {'N': '0'})
-                pipoCurrentValue = int(pipoRecord[matchName]['N'])
-                pipoRecord[matchName] = { 'N': str(pipoCurrentValue + 1) }
+        for _, match in enumerate(matches):
+            matchName = match.group().lower()
+            pipoRecord.setdefault(matchName, {'N': '0'})
+            pipoCurrentValue = int(pipoRecord[matchName]['N'])
+            pipoRecord[matchName] = { 'N': str(pipoCurrentValue + 1) }
 
         output = dynamodb.put_item(
             TableName='Pipo',

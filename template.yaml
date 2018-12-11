@@ -17,27 +17,13 @@ Outputs:
     Description: "Implicit IAM Role created for Hello World function"
     Value: HelloWorldFunctionRole.Arn
 Resources: 
-  HelloWorldFunction: 
-    Properties: 
-      CodeUri: hello_world/
-      Environment: 
-        Variables: 
-          PARAM1: VALUE
-      Events: 
-        HelloWorld: 
-          Properties: 
-            Method: get
-            Path: /hello
-          Type: Api
-      Handler: app.lambda_handler
-      Runtime: python2.7
-    Type: "AWS::Serverless::Function"
+
   PipoParseFunction: 
     Properties: 
       CodeUri: pipo_parse/
       Environment: 
         Variables: 
-          PARAM1: VALUE
+          TEST_LOCALLY: true
       Events: 
         HelloWorld: 
           Properties: 
@@ -47,4 +33,5 @@ Resources:
       Handler: app.lambda_handler
       Runtime: python2.7
     Type: "AWS::Serverless::Function"
+
 Transform: "AWS::Serverless-2016-10-31"
